@@ -1,11 +1,20 @@
 import random
+import math
 
-N = 4
+board_side_length = 5
+
+"""Initialize an NxN array to represent the square board.
+A value of 0 represents empty space, and a value of 1 represents filled space.
+Initially, the board is empty"""
+board = [[0] * board_side_length for i in range(board_side_length)]
+
 block_dimensions = [(2, 3)]  # Array containing (width, height) of the blocks
 
-board = [[0] * N for i in range(N)]  # Initialize empty board
-
-chromosome_length = 4  # two bits for x and two bits for y
+"""For a board length of n, at least lg(n) + 1 bits are needed.
+1 subtracted as 0-indexing scheme is used. 
+Multiplied by 2 since there are two coordinates: x and y.
+Finally, this is multiplied by the number of blocks."""
+chromosome_length = (int(math.log2(board_side_length - 1)) + 1) * 2 * len(block_dimensions)
 
 
 def binary_to_real(chromosome):
@@ -90,6 +99,8 @@ def check_overlap(chromosome):
             dx -= 1
 
     return True
+
+
 
 
 
