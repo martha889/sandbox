@@ -2,16 +2,19 @@ import random
 from math import ceil, log2
 
 """GLOBAL VARIABLES"""
-BOARD_SIDE_LENGTH = 5  # A square board is assumed
-NUMBER_OF_ITERATIONS = 100
+BOARD_SIDE_LENGTH = 4  # A square board is assumed
+
+NUMBER_OF_ITERATIONS = 1000
 MUTATION_BITS = 1
+POPULATION_SIZE, SELECTION_SIZE = 10, 20
+CROSSOVER_RATE, MUTATION_RATE = 0.6, 0.7
 
 """Initialize an NxN array to represent the square board.
 A value of 0 represents empty space, and a value of 1 represents filled space.
 Initially, the board is empty"""
 BOARD = [[0] * BOARD_SIDE_LENGTH for i in range(BOARD_SIDE_LENGTH)]
 
-BLOCK_DIMENSIONS = [(2, 3), (4, 3)]  # Array containing (width, height) of the blocks
+BLOCK_DIMENSIONS = [(1, 1), (1, 1), (1, 1)]  # Array containing (width, height) of the blocks
 UNIT_LENGTH = ceil(log2(BOARD_SIDE_LENGTH - 1))  # Bits used for one unit coordinate unit (X or Y)
 
 """For a board length of n, at least ceil(lg2(n)) bits are needed.
@@ -109,7 +112,8 @@ def cost_function(chromosome):
     for block_position, dimensions in zip(real_values_array, BLOCK_DIMENSIONS):
         check_one_block(block_position, dimensions)
 
-    return 5 * cost + check_empty_space(board_local)
+    # return -(5 * cost + check_empty_space(board_local))
+    return -cost
 
 
 def population_fitness(population):
@@ -156,28 +160,71 @@ def mutation(chromosome):
     return output_chromosome
 
 
-def selection_tournament(p_obj, n):
+def selection_tournament(pop_fitness, n):
     """Takes population of chromosome (with their fitness scores) and tournament size.
      Returns the best individual after tournament selection"""
-    return max([p_obj[random.randint(0, len(p_obj) - 1)] for i in range(n)], key=lambda x: x[1])[0]
+    return max([pop_fitness[random.randint(0, len(pop_fitness) - 1)] for i in range(n)], key=lambda x: x[1])[0]
 
 
-def selection_roulette(p_obj):
+def selection_roulette(pop_fitness):
     """Takes population (with fitness) and returns a single individual"""
-    total = sum(i[1] for i in p_obj)
-    p = [i[0] for i in p_obj]
-    w = [i[1] / total for i in p_obj]
+    total = sum(i[1] for i in pop_fitness)
+    p = [i[0] for i in pop_fitness]
+    w = [i[1] / total for i in pop_fitness]
     op = (random.choices(p, weights=w))[0]
     return op
 
 
-def selection_ranking(p_obj):
+def selection_ranking(pop_fitness):
     """Takes population of chromosome (with their fitness scores).
     Returns the best individual after ranking selection"""
-    n = len(p_obj)
+    n = len(pop_fitness)
     total = n * (n + 1) / 2
-    p1 = sorted(p_obj, key=lambda x: x[1])
+    p1 = sorted(pop_fitness, key=lambda x: x[1])
     p = [i[0] for i in p1]
     w = [(i + 1) / total for i in range(len(p1))]
     op = (random.choices(p, weights=w))[0]
     return op
+
+
+"""Parallelize from here"""
+mating_pool = population_generator(POPULATION_SIZE, CHROMOSOME_LENGTH)
+best1 = (max([i for i in population_fitness(mating_pool)], key=lambda x: x[1]))
+output_graph_x = []
+output_graph_y = []
+
+for i1 in range(NUMBER_OF_ITERATIONS):
+    mating_pool1 = []
+    mating_pool2 = []
+    mating_pool3 = []
+
+    # selection
+    for _ in range(SELECTION_SIZE):
+        mating_pool1.append(selection_roulette(population_fitness(mating_pool)))
+
+    # cross-over (rate = 0.6)
+    for _ in range(SELECTION_SIZE):
+        if random.random() <= CROSSOVER_RATE:
+            mating_pool2.append(crossover_two(mating_pool1[random.randint(0, SELECTION_SIZE - 1)], mating_pool1[random.randint(0, SELECTION_SIZE - 1)]))
+        else:
+            mating_pool2.append(mating_pool1[random.randint(0, SELECTION_SIZE - 1)])
+
+    # mutation (rate = 0.1)
+    for _ in range(SELECTION_SIZE):
+        k = random.randint(0, SELECTION_SIZE - 1)
+        if random.random() <= MUTATION_RATE:
+            mating_pool3.append(mutation(mating_pool2[k]))
+        else:
+            mating_pool3.append(mating_pool2[k])
+
+    mating_pool = mating_pool3
+
+    best2 = (max([i for i in population_fitness(mating_pool)], key=lambda x: x[1]))
+
+    if best2[1] > best1[1]:
+        best1 = best2
+
+    output_graph_x.append(i1+1)
+    output_graph_y.append(best1[1])
+
+    print('best after ' + str(i1+1) + ' iteration ' + str(abs(best2[1])), ', Overall Best: ' + str(abs(best1[1])))
