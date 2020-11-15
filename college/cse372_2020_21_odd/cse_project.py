@@ -1,39 +1,40 @@
 import random
-import math
+from math import ceil, log2
 
-BOARD_SIDE_LENGTH = 5
+"""GLOBAL VARIABLES"""
+BOARD_SIDE_LENGTH = 5  # A square board is assumed
+NUMBER_OF_ITERATIONS = 100
+MUTATION_BITS = 1
 
 """Initialize an NxN array to represent the square board.
 A value of 0 represents empty space, and a value of 1 represents filled space.
 Initially, the board is empty"""
-board_array = [[0] * board_side_length for i in range(board_side_length)]
+BOARD = [[0] * BOARD_SIDE_LENGTH for i in range(BOARD_SIDE_LENGTH)]
 
-BLOCK_DIMENSIONS = [(2, 3)]  # Array containing (width, height) of the blocks
+BLOCK_DIMENSIONS = [(2, 3), (4, 3)]  # Array containing (width, height) of the blocks
+UNIT_LENGTH = ceil(log2(BOARD_SIDE_LENGTH - 1))  # Bits used for one unit coordinate unit (X or Y)
 
-"""For a board length of n, at least lg(n) + 1 bits are needed.
+"""For a board length of n, at least ceil(lg2(n)) bits are needed.
 1 subtracted as 0-indexing scheme is used. 
 Multiplied by 2 since there are two coordinates: x and y.
 Finally, this is multiplied by the number of blocks."""
-chromosome_length = (int(math.log2(board_side_length - 1)) + 1) * 2 * len(BLOCK_DIMENSIONS)
+
+CHROMOSOME_LENGTH = UNIT_LENGTH * 2 * len(BLOCK_DIMENSIONS)
 
 
 def binary_to_real(chromosome):
     """Convert chromosome with binary values to its real values
-    Returns an array which contains positions of the top-right corner of each block as a tuple.
+    Returns an array which contains positions of the top-left corner of each block as a tuple.
     Example: [(x1, y1), (x2, y2), ..., ]"""
-
-    output_string = ""
+    global UNIT_LENGTH
     output_array = []
-    i = 0
-    while i + 2 <= len(chromosome):
-        output_string += str(int(chromosome[i: i + 2], 2))
-        i += 2
 
-    j = 0
-
-    while j + 1 < len(output_array):
-        output_array.append((int(output_string[j]), int(output_string[j+1])))
-        j += 2
+    multiply = 0
+    while (multiply + 2) * UNIT_LENGTH <= len(chromosome):
+        x = chromosome[UNIT_LENGTH * multiply: UNIT_LENGTH * (multiply + 1)]
+        y = chromosome[UNIT_LENGTH * (multiply + 1): UNIT_LENGTH * (multiply + 2)]
+        output_array.append([int(x, 2), int(y, 2)])
+        multiply += 2
 
     return output_array
 
@@ -59,62 +60,124 @@ def population_generator(size, length):
     return population
 
 
-def check_board(board, chromosome):
-    """Check if the given positions of blocks lie on the board and return the associated cost.
-    i.e. if the blocks lie on the board, return 0. Else return the amount lying outside the board"""
-
-    global BLOCK_DIMENSIONS
-    block_positions = binary_to_real(chromosome)
-    flag = True
-
-    for i in range(len(block_positions)):
-        if (block_positions[i][0] - block_dimensions[i][0] < 0) or (block_positions[i][1] - block_dimensions[i][1] < 0):
-            flag = False
-            break
-
-    return flag
-
-
-def check_overlap(board, chromosome):
-    """Check if there is overlapping of blocks, and return the associated cost.
-    i.e. if there is no overlap, return 0. Else return the amount of overlap."""
-
-    global BLOCK_DIMENSIONS
+def check_empty_space(board):
+    """Returns the amount of empty space on the board
+    Simply counts the number of 0s still present on the board"""
 
     cost = 0
-    occupied_positions = set()
-    real_values = binary_to_real(chromosome)
 
-    for i in range(len(real_values)):
-        x, y = real_values[i][0], real_values[i][1]
-        dx, dy = block_dimensions[i][0] - 1, block_dimensions[i][1] - 1
+    for row in board:
+        for col in row:
+            if col == 0:
+                cost += 1
 
-        while dx >= 0:
-            while dy >= 0:
-                to_be_added = (x - dx, y - dy)
-
-                if to_be_added in occupied_positions:
-                    return False
-
-                occupied_positions.add(to_be_added)
-                dy -= 1
-            dy = block_dimensions[i][1] - 1
-            dx -= 1
-
-    return True
+    return cost
 
 
-def cost_function(board, chromosome):
+def cost_function(chromosome):
     """Total cost is the sum of three costs:
-    1. The amount of empty space on the board
-    2. The amount of overlap between blocks
-    3. The amount of block area which does not lie on the board"""
+        1. The amount of empty space on the board
+        2. The amount of overlap between blocks
+        3. The amount of block area which does not lie on the board
+
+        The first two should be penalized more than the third cost.
+        So, they've been multiplied by a factor of 5.
+        """
+
+    global BLOCK_DIMENSIONS, BOARD
+
+    board_local = BOARD.copy()
+    cost = 0
+    real_values_array = binary_to_real(chromosome)
+
+    def check_one_block(position, dimension):
+        nonlocal cost
+
+        x, y = position[0], position[1]
+        width, height = dimension[0], dimension[1]
+
+        for row in range(x, x + width):
+            for col in range(y, y + height):
+                if row > (BOARD_SIDE_LENGTH - 1) or col > (BOARD_SIDE_LENGTH - 1):
+                    cost += max(0, row - (BOARD_SIDE_LENGTH - 1)) + max(0, col - (BOARD_SIDE_LENGTH - 1))
+                else:
+                    if board_local[row][col] == 0:
+                        board_local[row][col] = 1
+                    else:
+                        cost += 1
+
+    for block_position, dimensions in zip(real_values_array, BLOCK_DIMENSIONS):
+        check_one_block(block_position, dimensions)
+
+    return 5 * cost + check_empty_space(board_local)
 
 
+def population_fitness(population):
+    """Takes in the array of the entire population.
+    Returns a 2D array of the form [chromosome, fitness score] for entire population"""
+    return [[chromosome, cost_function(chromosome)] for chromosome in population]
 
 
+def crossover_one(chr1, chr2):
+    """Returns a crossed chromosome after performing one point crossover"""
+    p = random.randint(0, len(chr1) - 1)
+    o1 = chr1[:p] + chr2[p:]
+    return o1
 
 
+def crossover_two(chr1, chr2):
+    """Returns a crossed chromosome after performing two point crossover"""
+    p1, p2 = random.randint(0, len(chr1) - 1), random.randint(0, len(chr1) - 1)
+    p1, p2 = min(p1, p2), max(p1, p2)
+    o1 = chr1[:p1] + chr2[p1:p2] + chr1[p2:]
+    return o1
 
 
+def crossover_uniform(chr1, chr2):
+    """Returns a crossed chromosomes after performing uniform crossover"""
+    o1 = ''
+    for i in range(len(chr1)):
+        if random.random() > 0.5:
+            o1 += chr1[i]
+        else:
+            o1 += chr2[i]
+    return o1
 
+
+def mutation(chromosome):
+    """Returns a chromosome after mutating the specified number of bits"""
+    output_chromosome = ''
+    mut_b = [random.randint(0, len(chromosome) - 1) for i in range(MUTATION_BITS)]
+    for i in range(len(chromosome)):
+        if i in mut_b:
+            output_chromosome += str(1 - int(chromosome[i]))
+        else:
+            output_chromosome += chromosome[i]
+    return output_chromosome
+
+
+def selection_tournament(p_obj, n):
+    """Takes population of chromosome (with their fitness scores) and tournament size.
+     Returns the best individual after tournament selection"""
+    return max([p_obj[random.randint(0, len(p_obj) - 1)] for i in range(n)], key=lambda x: x[1])[0]
+
+
+def selection_roulette(p_obj):
+    """Takes population (with fitness) and returns a single individual"""
+    total = sum(i[1] for i in p_obj)
+    p = [i[0] for i in p_obj]
+    w = [i[1] / total for i in p_obj]
+    op = (random.choices(p, weights=w))[0]
+    return op
+
+
+def selection_ranking(p_obj):
+    """Takes population of chromosome (with their fitness scores).
+    Returns the best individual after ranking selection"""
+    n = len(p_obj)
+    total = n * (n + 1) / 2
+    p1 = sorted(p_obj, key=lambda x: x[1])
+    p = [i[0] for i in p1]
+    w = [(i + 1) / total for i in range(len(p1))]
+    op = (random.choices(p, weights=w))[0]
+    return op
