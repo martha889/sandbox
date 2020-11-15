@@ -1,20 +1,20 @@
 import random
 import math
 
-board_side_length = 5
+BOARD_SIDE_LENGTH = 5
 
 """Initialize an NxN array to represent the square board.
 A value of 0 represents empty space, and a value of 1 represents filled space.
 Initially, the board is empty"""
-board = [[0] * board_side_length for i in range(board_side_length)]
+board_array = [[0] * board_side_length for i in range(board_side_length)]
 
-block_dimensions = [(2, 3)]  # Array containing (width, height) of the blocks
+BLOCK_DIMENSIONS = [(2, 3)]  # Array containing (width, height) of the blocks
 
 """For a board length of n, at least lg(n) + 1 bits are needed.
 1 subtracted as 0-indexing scheme is used. 
 Multiplied by 2 since there are two coordinates: x and y.
 Finally, this is multiplied by the number of blocks."""
-chromosome_length = (int(math.log2(board_side_length - 1)) + 1) * 2 * len(block_dimensions)
+chromosome_length = (int(math.log2(board_side_length - 1)) + 1) * 2 * len(BLOCK_DIMENSIONS)
 
 
 def binary_to_real(chromosome):
@@ -39,6 +39,7 @@ def binary_to_real(chromosome):
 
 
 def chromosome_generator(length):
+    """Generate a random chromosome of the given length"""
     output_chromosome = ""
     for _ in range(length):
         if random.random() > 0.5:
@@ -58,11 +59,11 @@ def population_generator(size, length):
     return population
 
 
-def check_board(chromosome):
-    """Check if the given positions of blocks lie on the board:
-    return True if yes, else return False"""
+def check_board(board, chromosome):
+    """Check if the given positions of blocks lie on the board and return the associated cost.
+    i.e. if the blocks lie on the board, return 0. Else return the amount lying outside the board"""
 
-    global block_dimensions
+    global BLOCK_DIMENSIONS
     block_positions = binary_to_real(chromosome)
     flag = True
 
@@ -74,11 +75,13 @@ def check_board(chromosome):
     return flag
 
 
-def check_overlap(chromosome):
-    """Check if there is overlapping of blocks.
-    return True if yes, else return False"""
+def check_overlap(board, chromosome):
+    """Check if there is overlapping of blocks, and return the associated cost.
+    i.e. if there is no overlap, return 0. Else return the amount of overlap."""
 
-    global N, block_dimensions
+    global BLOCK_DIMENSIONS
+
+    cost = 0
     occupied_positions = set()
     real_values = binary_to_real(chromosome)
 
@@ -99,6 +102,14 @@ def check_overlap(chromosome):
             dx -= 1
 
     return True
+
+
+def cost_function(board, chromosome):
+    """Total cost is the sum of three costs:
+    1. The amount of empty space on the board
+    2. The amount of overlap between blocks
+    3. The amount of block area which does not lie on the board"""
+
 
 
 
