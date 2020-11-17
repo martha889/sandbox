@@ -1,23 +1,25 @@
 import time
 import random
+import multiprocessing
 from copy import deepcopy
 from math import ceil, log2
 
 
 """GLOBAL VARIABLES"""
-BOARD_SIDE_LENGTH = 7  # A square board is assumed
+BOARD_SIDE_LENGTH = 6  # A square board is assumed
 
-NUMBER_OF_ITERATIONS = 2000
+NUMBER_OF_ITERATIONS = 1000
 MUTATION_BITS = 2
 POPULATION_SIZE, SELECTION_SIZE = 10, 20
-CROSSOVER_RATE, MUTATION_RATE = 0.5, 0.8
+CROSSOVER_RATE, MUTATION_RATE = 0.6, 0.6
 
 """Initialize an NxN array to represent the square board.
 A value of 0 represents empty space, and a value of 1 represents filled space.
 Initially, the board is empty"""
 BOARD = [[0] * BOARD_SIDE_LENGTH for i in range(BOARD_SIDE_LENGTH)]
 
-BLOCK_DIMENSIONS = [(2, 1), (1, 1), (1, 3), (4, 1), (3, 1), (1, 2), (2, 4), (1, 4), (1, 2), (2, 2), (1, 1)]  # Array containing (height, width) of the blocks
+BLOCK_DIMENSIONS = [(2, 1), (1, 1), (1, 3), (4, 1), (3, 1), (1, 2), (2, 4), (1, 4), (2, 2)]  # Array containing (
+# height, width) of the blocks
 UNIT_LENGTH = ceil(log2(BOARD_SIDE_LENGTH - 1))  # Bits used for one unit coordinate unit (X or Y)
 
 """For a board length of n, at least ceil(lg2(n)) bits are needed.
@@ -26,6 +28,10 @@ Multiplied by 2 since there are two coordinates: x and y.
 Finally, this is multiplied by the number of blocks."""
 
 CHROMOSOME_LENGTH = UNIT_LENGTH * 2 * len(BLOCK_DIMENSIONS)
+
+
+"""Parallelize"""
+NUMBER_OF_PROCESSORS = 4
 
 
 def binary_to_real(chromosome):
@@ -227,57 +233,66 @@ def display_board(board):
 
 
 """Parallelize from here"""
-print(BOARD, "1")
-mating_pool = population_generator(POPULATION_SIZE, CHROMOSOME_LENGTH)
-print(BOARD, "2")
-best1 = (max([i for i in population_fitness(mating_pool)], key=lambda x: x[1]))
-print(BOARD, "3")
-output_graph_x = []
-output_graph_y = []
 
-print('best after ' + str("1") + ' iteration ' + str(abs(best1[1])), ', Overall Best: ' + str(abs(best1[1])))
 
-start_time = time.time()
+def genetic_algorithm(n=NUMBER_OF_ITERATIONS):
 
-for i1 in range(NUMBER_OF_ITERATIONS):
-    mating_pool1 = []
-    mating_pool2 = []
-    mating_pool3 = []
+    mating_pool = population_generator(POPULATION_SIZE, CHROMOSOME_LENGTH)
+    best1 = (max([i for i in population_fitness(mating_pool)], key=lambda x: x[1]))
 
-    # Selection
-    for _ in range(SELECTION_SIZE):
-        mating_pool1.append(selection_tournament(population_fitness(mating_pool)))
+    def iterations():
+        nonlocal best1, mating_pool
 
-    # Crossover
-    for _ in range(SELECTION_SIZE):
-        if random.random() <= CROSSOVER_RATE:
-            mating_pool2.append(crossover_two(mating_pool1[random.randint(0, SELECTION_SIZE - 1)], mating_pool1[random.randint(0, SELECTION_SIZE - 1)]))
-        else:
-            mating_pool2.append(mating_pool1[random.randint(0, SELECTION_SIZE - 1)])
+        for i1 in range(n):
+            mating_pool1 = []
+            mating_pool2 = []
+            mating_pool3 = []
 
-    # Mutation
-    for _ in range(SELECTION_SIZE):
-        k = random.randint(0, SELECTION_SIZE - 1)
-        if random.random() <= MUTATION_RATE:
-            mating_pool3.append(mutation(mating_pool2[k]))
-        else:
-            mating_pool3.append(mating_pool2[k])
+            # Selection
+            for _ in range(SELECTION_SIZE):
+                mating_pool1.append(selection_tournament(population_fitness(mating_pool)))
 
-    mating_pool = mating_pool3
+            # Crossover
+            for _ in range(SELECTION_SIZE):
+                if random.random() <= CROSSOVER_RATE:
+                    mating_pool2.append(crossover_two(mating_pool1[random.randint(0, SELECTION_SIZE - 1)], mating_pool1[random.randint(0, SELECTION_SIZE - 1)]))
+                else:
+                    mating_pool2.append(mating_pool1[random.randint(0, SELECTION_SIZE - 1)])
 
-    best2 = (max([i for i in population_fitness(mating_pool)], key=lambda x: x[1]))
+            # Mutation
+            for _ in range(SELECTION_SIZE):
+                k = random.randint(0, SELECTION_SIZE - 1)
+                if random.random() <= MUTATION_RATE:
+                    mating_pool3.append(mutation(mating_pool2[k]))
+                else:
+                    mating_pool3.append(mating_pool2[k])
 
-    if best2[1] > best1[1]:
-        best1 = best2
+            mating_pool = mating_pool3
 
-    output_graph_x.append(i1+1)
-    output_graph_y.append(best1[1])
+            best2 = (max([i for i in population_fitness(mating_pool)], key=lambda x: x[1]))
 
-    print('best after ' + str(i1+2) + ' iteration ' + str(abs(best2[1])), ', Overall Best: ' + str(abs(best1[1])))
+            if best2[1] > best1[1]:
+                best1 = best2
 
-end_time = time.time()
+            print('best after ' + str(i1+2) + ' iteration: ' + str(abs(best2[1])), ', Overall Best: ' + str(abs(best1[1])))
 
-print()
-display_board(create_board(best1[0]))
-print()
-print(f'Time taken: {end_time - start_time} seconds')
+    iterations()
+
+    best_chromosome = best1[0]
+    print()
+    display_board(create_board(best_chromosome))
+    print()
+
+
+"""Multiprocessing"""
+if __name__ == '__main__':
+    start_time = time.time()
+
+    pool = multiprocessing.Pool(NUMBER_OF_PROCESSORS)
+    pool.map(genetic_algorithm, [NUMBER_OF_ITERATIONS // NUMBER_OF_PROCESSORS] * NUMBER_OF_PROCESSORS)
+
+    end_time = time.time()
+
+    print()
+    print(f'Time taken for {NUMBER_OF_PROCESSORS} processors: {end_time - start_time} seconds')
+
