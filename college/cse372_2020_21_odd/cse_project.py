@@ -1,22 +1,23 @@
 import time
 import random
+from copy import deepcopy
 from math import ceil, log2
 
 
 """GLOBAL VARIABLES"""
-BOARD_SIDE_LENGTH = 4  # A square board is assumed
+BOARD_SIDE_LENGTH = 7  # A square board is assumed
 
 NUMBER_OF_ITERATIONS = 2000
-MUTATION_BITS = 1
+MUTATION_BITS = 2
 POPULATION_SIZE, SELECTION_SIZE = 10, 20
-CROSSOVER_RATE, MUTATION_RATE = 0.6, 0.7
+CROSSOVER_RATE, MUTATION_RATE = 0.5, 0.8
 
 """Initialize an NxN array to represent the square board.
 A value of 0 represents empty space, and a value of 1 represents filled space.
 Initially, the board is empty"""
 BOARD = [[0] * BOARD_SIDE_LENGTH for i in range(BOARD_SIDE_LENGTH)]
 
-BLOCK_DIMENSIONS = [(2, 1), (1, 1), (1, 3)]  # Array containing (width, height) of the blocks
+BLOCK_DIMENSIONS = [(2, 1), (1, 1), (1, 3), (4, 1), (3, 1), (1, 2), (2, 4), (1, 4), (1, 2), (2, 2), (1, 1)]  # Array containing (height, width) of the blocks
 UNIT_LENGTH = ceil(log2(BOARD_SIDE_LENGTH - 1))  # Bits used for one unit coordinate unit (X or Y)
 
 """For a board length of n, at least ceil(lg2(n)) bits are needed.
@@ -89,9 +90,8 @@ def cost_function(chromosome):
         So, they've been multiplied by a factor of 5.
         """
 
-    global BLOCK_DIMENSIONS, BOARD
-
-    board_local = BOARD.copy()
+    global BLOCK_DIMENSIONS, BOARD, BOARD_SIDE_LENGTH
+    board_local = deepcopy(BOARD)
     cost = 0
     real_values_array = binary_to_real(chromosome)
 
@@ -114,8 +114,7 @@ def cost_function(chromosome):
     for block_position, dimensions in zip(real_values_array, BLOCK_DIMENSIONS):
         check_one_block(block_position, dimensions)
 
-    # return -(5 * cost + check_empty_space(board_local))
-    return -cost
+    return -((BOARD_SIDE_LENGTH ** 2) * cost + check_empty_space(board_local))
 
 
 def population_fitness(population):
@@ -162,10 +161,10 @@ def mutation(chromosome):
     return output_chromosome
 
 
-def selection_tournament(pop_fitness, n):
+def selection_tournament(pop_fitness):
     """Takes population of chromosome (with their fitness scores) and tournament size.
      Returns the best individual after tournament selection"""
-    return max([pop_fitness[random.randint(0, len(pop_fitness) - 1)] for _ in range(n)], key=lambda x: x[1])[0]
+    return max([pop_fitness[random.randint(0, len(pop_fitness) - 1)] for _ in range(len(pop_fitness))], key=lambda x: x[1])[0]
 
 
 def selection_roulette(pop_fitness):
@@ -189,11 +188,54 @@ def selection_ranking(pop_fitness):
     return op
 
 
+def create_board(chromosome):
+    """Takes in a chromosome.
+    Returns the board after placing the blocks as per the chromosome"""
+    global BLOCK_DIMENSIONS, BOARD
+    board_local = deepcopy(BOARD)
+    board_index = 1
+
+    real_values_array = binary_to_real(chromosome)
+
+    def check_one_block(position, dimension):
+        nonlocal board_local, board_index
+
+        x, y = position[0], position[1]
+        width, height = dimension[0], dimension[1]
+
+        for row in range(x, x + width):
+            for col in range(y, y + height):
+                if row > (BOARD_SIDE_LENGTH - 1) or col > (BOARD_SIDE_LENGTH - 1):
+                    pass
+                else:
+                    if board_local[row][col] == 0:
+                        board_local[row][col] = board_index
+
+    for block_position, dimensions in zip(real_values_array, BLOCK_DIMENSIONS):
+        check_one_block(block_position, dimensions)
+        board_index += 1
+
+    return board_local
+
+
+def display_board(board):
+    """Display the 2D array (board) as a matrix"""
+    for i in board:
+        for j in i:
+            print(j, end=" ")
+        print("\n", end="")
+
+
 """Parallelize from here"""
+print(BOARD, "1")
 mating_pool = population_generator(POPULATION_SIZE, CHROMOSOME_LENGTH)
+print(BOARD, "2")
 best1 = (max([i for i in population_fitness(mating_pool)], key=lambda x: x[1]))
+print(BOARD, "3")
 output_graph_x = []
 output_graph_y = []
+
+print('best after ' + str("1") + ' iteration ' + str(abs(best1[1])), ', Overall Best: ' + str(abs(best1[1])))
 
 start_time = time.time()
 
@@ -204,7 +246,7 @@ for i1 in range(NUMBER_OF_ITERATIONS):
 
     # Selection
     for _ in range(SELECTION_SIZE):
-        mating_pool1.append(selection_roulette(population_fitness(mating_pool)))
+        mating_pool1.append(selection_tournament(population_fitness(mating_pool)))
 
     # Crossover
     for _ in range(SELECTION_SIZE):
@@ -231,8 +273,11 @@ for i1 in range(NUMBER_OF_ITERATIONS):
     output_graph_x.append(i1+1)
     output_graph_y.append(best1[1])
 
-    print('best after ' + str(i1+1) + ' iteration ' + str(abs(best2[1])), ', Overall Best: ' + str(abs(best1[1])))
+    print('best after ' + str(i1+2) + ' iteration ' + str(abs(best2[1])), ', Overall Best: ' + str(abs(best1[1])))
 
 end_time = time.time()
 
-print(f'Time: {end_time - start_time} seconds')
+print()
+display_board(create_board(best1[0]))
+print()
+print(f'Time taken: {end_time - start_time} seconds')
