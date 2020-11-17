@@ -1,10 +1,12 @@
+import time
 import random
 from math import ceil, log2
+
 
 """GLOBAL VARIABLES"""
 BOARD_SIDE_LENGTH = 4  # A square board is assumed
 
-NUMBER_OF_ITERATIONS = 1000
+NUMBER_OF_ITERATIONS = 2000
 MUTATION_BITS = 1
 POPULATION_SIZE, SELECTION_SIZE = 10, 20
 CROSSOVER_RATE, MUTATION_RATE = 0.6, 0.7
@@ -14,7 +16,7 @@ A value of 0 represents empty space, and a value of 1 represents filled space.
 Initially, the board is empty"""
 BOARD = [[0] * BOARD_SIDE_LENGTH for i in range(BOARD_SIDE_LENGTH)]
 
-BLOCK_DIMENSIONS = [(1, 1), (1, 1), (1, 1)]  # Array containing (width, height) of the blocks
+BLOCK_DIMENSIONS = [(2, 1), (1, 1), (1, 3)]  # Array containing (width, height) of the blocks
 UNIT_LENGTH = ceil(log2(BOARD_SIDE_LENGTH - 1))  # Bits used for one unit coordinate unit (X or Y)
 
 """For a board length of n, at least ceil(lg2(n)) bits are needed.
@@ -151,7 +153,7 @@ def crossover_uniform(chr1, chr2):
 def mutation(chromosome):
     """Returns a chromosome after mutating the specified number of bits"""
     output_chromosome = ''
-    mut_b = [random.randint(0, len(chromosome) - 1) for i in range(MUTATION_BITS)]
+    mut_b = [random.randint(0, len(chromosome) - 1) for _ in range(MUTATION_BITS)]
     for i in range(len(chromosome)):
         if i in mut_b:
             output_chromosome += str(1 - int(chromosome[i]))
@@ -163,7 +165,7 @@ def mutation(chromosome):
 def selection_tournament(pop_fitness, n):
     """Takes population of chromosome (with their fitness scores) and tournament size.
      Returns the best individual after tournament selection"""
-    return max([pop_fitness[random.randint(0, len(pop_fitness) - 1)] for i in range(n)], key=lambda x: x[1])[0]
+    return max([pop_fitness[random.randint(0, len(pop_fitness) - 1)] for _ in range(n)], key=lambda x: x[1])[0]
 
 
 def selection_roulette(pop_fitness):
@@ -193,23 +195,25 @@ best1 = (max([i for i in population_fitness(mating_pool)], key=lambda x: x[1]))
 output_graph_x = []
 output_graph_y = []
 
+start_time = time.time()
+
 for i1 in range(NUMBER_OF_ITERATIONS):
     mating_pool1 = []
     mating_pool2 = []
     mating_pool3 = []
 
-    # selection
+    # Selection
     for _ in range(SELECTION_SIZE):
         mating_pool1.append(selection_roulette(population_fitness(mating_pool)))
 
-    # cross-over (rate = 0.6)
+    # Crossover
     for _ in range(SELECTION_SIZE):
         if random.random() <= CROSSOVER_RATE:
             mating_pool2.append(crossover_two(mating_pool1[random.randint(0, SELECTION_SIZE - 1)], mating_pool1[random.randint(0, SELECTION_SIZE - 1)]))
         else:
             mating_pool2.append(mating_pool1[random.randint(0, SELECTION_SIZE - 1)])
 
-    # mutation (rate = 0.1)
+    # Mutation
     for _ in range(SELECTION_SIZE):
         k = random.randint(0, SELECTION_SIZE - 1)
         if random.random() <= MUTATION_RATE:
@@ -228,3 +232,7 @@ for i1 in range(NUMBER_OF_ITERATIONS):
     output_graph_y.append(best1[1])
 
     print('best after ' + str(i1+1) + ' iteration ' + str(abs(best2[1])), ', Overall Best: ' + str(abs(best1[1])))
+
+end_time = time.time()
+
+print(f'Time: {end_time - start_time} seconds')
