@@ -4,11 +4,10 @@ import multiprocessing
 from copy import deepcopy
 from math import ceil, log2
 
-"""PARAMETERS (CHANGEABLE)"""
-BOARD_SIDE_LENGTH = 6  # A square board is assumed
+"""INPUTS (CHANGEABLE)"""
 NUMBER_OF_PROCESSORS = 2
 
-"""INPUTS (CHANGEABLE)"""
+BOARD_SIDE_LENGTH = 6  # A square board is assumed
 BLOCK_DIMENSIONS = [(2, 1), (1, 1), (1, 3), (4, 1), (3, 1), (1, 2), (2, 4), (1, 4), (2, 2)]  # Array containing (
 # height, width) of the blocks
 
