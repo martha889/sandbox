@@ -4,34 +4,35 @@ import multiprocessing
 from copy import deepcopy
 from math import ceil, log2
 
-
-"""GLOBAL VARIABLES"""
+"""PARAMETERS (CHANGEABLE)"""
 BOARD_SIDE_LENGTH = 6  # A square board is assumed
+NUMBER_OF_PROCESSORS = 2
 
-NUMBER_OF_ITERATIONS = 1000
+"""INPUTS (CHANGEABLE)"""
+BLOCK_DIMENSIONS = [(2, 1), (1, 1), (1, 3), (4, 1), (3, 1), (1, 2), (2, 4), (1, 4), (2, 2)]  # Array containing (
+# height, width) of the blocks
+
+"""GENETIC ALGORITHM PARAMETERS (CHANGEABLE)"""
+NUMBER_OF_ITERATIONS = 500
 MUTATION_BITS = 2
 POPULATION_SIZE, SELECTION_SIZE = 10, 20
 CROSSOVER_RATE, MUTATION_RATE = 0.6, 0.6
 
-"""Initialize an NxN array to represent the square board.
-A value of 0 represents empty space, and a value of 1 represents filled space.
-Initially, the board is empty"""
-BOARD = [[0] * BOARD_SIDE_LENGTH for i in range(BOARD_SIDE_LENGTH)]
 
-BLOCK_DIMENSIONS = [(2, 1), (1, 1), (1, 3), (4, 1), (3, 1), (1, 2), (2, 4), (1, 4), (2, 2)]  # Array containing (
-# height, width) of the blocks
+"""THE VARIABLES BELOW ARE DEPENDENT ON THE ABOVE PARAMETERS"""
 UNIT_LENGTH = ceil(log2(BOARD_SIDE_LENGTH - 1))  # Bits used for one unit coordinate unit (X or Y)
 
 """For a board length of n, at least ceil(lg2(n)) bits are needed.
 1 subtracted as 0-indexing scheme is used. 
 Multiplied by 2 since there are two coordinates: x and y.
 Finally, this is multiplied by the number of blocks."""
-
 CHROMOSOME_LENGTH = UNIT_LENGTH * 2 * len(BLOCK_DIMENSIONS)
 
 
-"""Parallelize"""
-NUMBER_OF_PROCESSORS = 4
+"""Initialize an NxN array to represent the square board.
+A value of 0 represents empty space, and a value of 1 represents filled space.
+Initially, the board is empty"""
+BOARD = [[0] * BOARD_SIDE_LENGTH for i in range(BOARD_SIDE_LENGTH)]
 
 
 def binary_to_real(chromosome):
