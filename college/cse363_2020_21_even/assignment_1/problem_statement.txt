@@ -1,0 +1,5 @@
+Assignment 1: Stemming
+
+Download Porter Stemmer and Lovins Stemmer. See their code. Write down the differences. Write Porter's equivalent for any one Indian language of your choice. What could be the differences for Lemmatization? Submit your findings. 
+
+You can download any file from news or any other domain and save in txt format for  for showing the output. Sample Hindi and Bengali files are attached.

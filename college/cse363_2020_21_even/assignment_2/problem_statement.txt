@@ -1,0 +1,14 @@
+0. Make a team of 2 people of your choice (maintain the team for all future assignments as well)
+
+1. Consider the following 2 document collection 
+i. English: https://drive.google.com/file/d/1FnURJo6OQuHLjj-_M6lY5VvoFbbssxQd/view?usp=sharing
+
+ii. Hindi https://drive.google.com/file/d/10brF5db4DlidRTSbUUg_Zm6ARS1SChmK/view?usp=sharing
+
+(For any issues on access, contact Mr Siba Sankar, TA for the course)
+
+2. See how far Zipf's, and Luhn's law hod good for both the dataset.
+
+3. Do necessary pre-processing (cleaning, stemming/lemmatization, stopword removal)
+
+4. Create index to print posting list for any given term with its term-frequency and document-frequency.
