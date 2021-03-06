@@ -1,0 +1,5 @@
+Consider the collection in Assignment 2. Build index on it and
+
+i. Implement Boolean retrieval. Queries can have all possible connectors (AND, OR, NOT). The retrieval system should handle at least 3 words.
+
+ii. Implement VSM on the above index.
