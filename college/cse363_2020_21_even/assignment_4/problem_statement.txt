@@ -1,0 +1,2 @@
+1. Download any document collection from 20 Newsgroups dataset (http://qwone.com/~jason/20Newsgroups/)
+2. Write your own code to implement Naive Bayes classification for text classification with 20 classes (Consider suitable training and testing data).
