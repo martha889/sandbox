@@ -1,0 +1,1 @@
+Design and develop a crawler either from scratch or using different open-source resources. Make a collection of at least 100 web-docs starting with any seed page
