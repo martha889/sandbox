@@ -15,25 +15,27 @@ with open("crawled.txt", 'w', encoding='utf-8') as file:  # Create file to write
 
 while queue.qsize() and number_of_pages:  # While there are links in the queue
     page_url = queue.get()
-    response = urlopen(page_url)
-    print("Crawling page:", page_url)
-    soup = BeautifulSoup(response, 'lxml')
+    if page_url not in crawled:
+        response = urlopen(page_url)
+        print("Crawling page:", page_url)
+        soup = BeautifulSoup(response, 'lxml')
 
-    with open ("crawled.txt", 'a') as file:
-        file.write(page_url + "\n")
+        with open ("crawled.txt", 'a') as file:
+            file.write(page_url + "\n")
 
-    for a in soup.find_all('a', href=True):  # Find all links under href attribute of <a> tag
-        link = a['href']
-        output_url = ''
+        for a in soup.find_all('a', href=True):  # Find all links under href attribute of <a> tag
+            link = a['href']
+            output_url = ''
+            text = a.string
 
-        if link.startswith('/wiki'):  # Convert relative link to absolute link
-            output_url += HOMEPAGE + link
+            if link.startswith('/wiki'):  # Convert relative link to absolute link
+                output_url += HOMEPAGE + link
 
-        elif link.startswith('https://en.wikipedia.org'):  # only crawl the English wikipedia website
-            output_url += link
+            elif link.startswith('https://en.wikipedia.org'):  # only crawl the English wikipedia website
+                output_url += link
 
-        if len(output_url) and page_url not in crawled:  # Avoid duplicates and empty strings
-            queue.put(output_url)  # Only store absolute links in queue
+            if len(output_url) and (output_url not in crawled) and not output_url.count('#') and output_url.count(':') == 1 and text is not None:  # Avoid duplicates and empty strings
+                queue.put(output_url)  # Only store absolute links in queue
 
     crawled.add(page_url)
     number_of_pages -= 1
